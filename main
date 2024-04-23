@@ -17,6 +17,7 @@ night = ['Доброй ночи! Чем я могу Вам помочь?', "До
 
 sp = []
 bro = []
+users = {}
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -94,6 +95,46 @@ def menu(message, page=1, previous_message=None):
     except:
         pass
 
+
+@bot.message_handler(commands=['br'])
+def welcome(message):
+    chat_id = message.chat.id
+    bot.send_message(chat_id,
+                     'Сколько человек пойдет с Вами?')
+    users[chat_id] = {}
+    bot.register_next_step_handler(message, second)
+
+def second(message):
+    chat_id = message.chat.id
+    name = message.text
+    bro.append(name)
+    bot.send_message(chat_id, f'Отлично! Теперь укажите время, на которое Вы хотите забронировать столик')
+    bot.register_next_step_handler(message, third)
+
+
+def third(message):
+    chat_id = message.chat.id
+    name = message.text
+    bro.append(name)
+    bot.send_message(chat_id, f'Отлично! Теперь укажите дополнительные пожелания, если они есть')
+    bot.register_next_step_handler(message, four)
+
+
+def four(message):
+    global bro
+    button = types.InlineKeyboardMarkup()
+    no = types.InlineKeyboardButton("Отменить", callback_data='no')
+    yes = types.InlineKeyboardButton("Подтвердить", callback_data='yes')
+    button.add(no)
+    button.add(yes)
+    chat_id = message.chat.id
+    surname = message.text
+    bro.append(surname)
+    bot.send_message(chat_id, f'''Ваши данные успешно сохранены! Проверьте заказ: 
+Количество человек: {bro[0]}
+Время: {bro[1]}
+Доп пожелания: {bro[2]}''', reply_markup=button)
+
 @bot.message_handler(content_types=['text'])
 def question(message):
     if message.text.lower() != 'отменить':
@@ -102,25 +143,10 @@ def question(message):
     else:
         bot.send_message(message.chat.id, 'Вопрос отменен, но Вы можете снова задать вопрос')
 
-def count(message):
-    bot.send_message(message.chat.id, "Сколько человек пойдет с Вами?")
-    bot.register_next_step_handler(message, timetime)
-
-def timetime(message):
-    bro.append(message)
-    bot.send_message(message.chat.id, "Укажите время, на которое Вы хотите забронировать столик?")
-    bot.register_next_step_handler(message, dop)
-
-def dop(message):
-    bro.append(message)
-    bot.send_message(message.chat.id, "Есть ли У Вас дополнительные пожелания?")
-    bot.register_next_step_handler(message, itog)
-
-def itog(message):
-    bot.send_message(message.chat.id, f"Подтвердите бронирование столика: {*sp}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def function(call):
+    global bro
     if call.data == "button4":
         bot.send_location(call.message.chat.id, 55, 37)
     if 'to' in call.data:
@@ -129,6 +155,19 @@ def function(call):
     if call.data == "question":
         bot.send_message(call.message.chat.id, 'Пожалуйста, задайте вопрос либо напишите: Отменить')
     if call.data == "broni":
-        bot.register_next_step_handler(call.message, count(call.message))
+        welcome(message=call.message)
+    if call.data == "no":
+        bro = []
+        print(bro)
+        bot.send_message(call.message.chat.id, 'Вы отменили бронирование столика, но можете попробовать еще раз')
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    if call.data == "yes":
+        print(bro)
+        bot.send_message(call.message.chat.id, f"""Новый заказ:
+Количество: {bro[0]} 
+Время: {bro[1]}
+Доп пожелания: {bro[2]}""")
+
+
 
 bot.polling(none_stop=True)
