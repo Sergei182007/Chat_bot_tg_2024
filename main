@@ -19,6 +19,7 @@ sp = []
 bro = []
 users = {}
 
+
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.InlineKeyboardMarkup()
@@ -55,7 +56,6 @@ def menu(message, page=1, previous_message=None):
     product_query = cursor.execute(f"SELECT title, description, photo, price FROM dishes WHERE page = ?;",
                                    (page,))
     title, description, photo, price = product_query.fetchone()
-
 
     buttons = types.InlineKeyboardMarkup()
     if page != 1:
@@ -99,10 +99,9 @@ def menu(message, page=1, previous_message=None):
 @bot.message_handler(commands=['br'])
 def welcome(message):
     chat_id = message.chat.id
-    bot.send_message(chat_id,
-                     'Сколько человек пойдет с Вами?')
-    users[chat_id] = {}
+    bot.send_message(chat_id, 'Сколько человек пойдет с Вами?')
     bot.register_next_step_handler(message, second)
+
 
 def second(message):
     chat_id = message.chat.id
@@ -121,6 +120,14 @@ def third(message):
 
 
 def four(message):
+    chat_id = message.chat.id
+    name = message.text
+    bro.append(name)
+    bot.send_message(chat_id, f'Отлично! Осталось указать номер телефона, чтобы мы могли с Вами связаться')
+    bot.register_next_step_handler(message, five)
+
+
+def five(message):
     global bro
     button = types.InlineKeyboardMarkup()
     no = types.InlineKeyboardButton("Отменить", callback_data='no')
@@ -135,13 +142,73 @@ def four(message):
 Время: {bro[1]}
 Доп пожелания: {bro[2]}''', reply_markup=button)
 
-@bot.message_handler(content_types=['text'])
+
+def send_chef(message):
+    bot.send_message(1970887100, message)
+
+
 def question(message):
-    if message.text.lower() != 'отменить':
-        sp.append(message.text)
-        bot.send_message(1970887100, f'Вопрос от пользователя {message.from_user.first_name}: {sp[-1]}')
+    current = datetime.now()
+    if int(current.hour) in [6, 7, 8, 9, 10, 11]:
+        bot.send_message(message.chat.id,
+                         f"Доброе утро! Вы можете задать нам вопрос, мы постараемся на него ответить".format(
+                             message.from_user,
+                             bot.get_me()),
+                         parse_mode='html')
+    elif int(current.hour) in [12, 13, 14, 15, 16]:
+        bot.send_message(message.chat.id,
+                         f"Добрый день! Вы можете задать нам вопрос, мы постараемся на него ответить".format(
+                             message.from_user,
+                             bot.get_me()),
+                         parse_mode='html')
+
+    # bot.send_message(chat_id="6361272148", text=f"Присоединился пользователь {message.from_user.first_name}")
+    elif int(current.hour) in [17, 18, 19, 20, 21]:
+        bot.send_message(message.chat.id,
+                         f"Добрый вечер! Вы можете задать нам вопрос, мы постараемся на него ответить".format(
+                             message.from_user,
+                             bot.get_me()),
+                         parse_mode='html')
     else:
-        bot.send_message(message.chat.id, 'Вопрос отменен, но Вы можете снова задать вопрос')
+        bot.send_message(message.chat.id,
+                         f"Доброй ночи! Вы можете задать нам вопрос, мы постараемся на него ответить".format(
+                             message.from_user,
+                             bot.get_me()),
+                         parse_mode='html')
+    bot.register_next_step_handler(message, help_bot)
+
+
+def help_bot(message):
+    sp.append((message.message_id, message.chat.id))
+    bot.forward_message(1970887100, message.chat.id, message.message_id)
+    markup_inline = types.InlineKeyboardMarkup([[
+        types.InlineKeyboardButton(text='Ответить', callback_data=f'answer{message.chat.id}')
+    ], [
+        types.InlineKeyboardButton(text='Отклонить', callback_data=f'delete{message.chat.id}')
+    ]])
+    bot.send_message(1970887100, f"Действие:", reply_markup=markup_inline)
+    bot.register_next_step_handler(message, help_bot)
+
+
+@bot.message_handler(commands=["requests"], func=lambda m: int(m.chat.id) == int(1970887100))
+def all_messages(message):
+    bot.send_message(message.chat.id, "Доступные запросы:")
+    for i, req in enumerate(sp):
+        bot.forward_message(1970887100, req[1], req[0])
+        markup_inline = types.InlineKeyboardMarkup([[
+            types.InlineKeyboardButton(text='Ответить', callback_data=f'answer{message.chat.id}')
+        ], [
+            types.InlineKeyboardButton(text='Отклонить', callback_data=f'delete{message.chat.id}')
+        ]])
+        bot.send_message(message.chat.id, f"Действие:", reply_markup=markup_inline)
+
+
+def send_answer(message: types.Message, call, chat_id):
+    bot.send_message(call.message.chat.id, "Ответ отправлен!")
+    bot.send_message(chat_id, message.text)
+    for i, req in enumerate(sp):
+        if int(req[1]) == int(chat_id):
+            del sp[i]
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -153,21 +220,28 @@ def function(call):
         page = int(call.data.split(' ')[1])
         menu(call.message, page=page, previous_message=call.message)
     if call.data == "question":
-        bot.send_message(call.message.chat.id, 'Пожалуйста, задайте вопрос либо напишите: Отменить')
+        question(message=call.message)
     if call.data == "broni":
         welcome(message=call.message)
+    if call.data.startswith("answer"):
+        chat_id = int(call.data[6:])
+
+        bot.send_message(call.message.chat.id, "Напишите ответное сообщение пользователю")
+        bot.register_next_step_handler(call.message, lambda msg: send_answer(msg, call, chat_id))
+    if call.data.startswith("delete"):
+        chat_id = int(call.data[6:])
+        bot.send_message(chat_id, "Администратор посчитал Ваш запрос плохим")
     if call.data == "no":
         bro = []
-        print(bro)
         bot.send_message(call.message.chat.id, 'Вы отменили бронирование столика, но можете попробовать еще раз')
         bot.delete_message(call.message.chat.id, call.message.message_id)
     if call.data == "yes":
-        print(bro)
-        bot.send_message(call.message.chat.id, f"""Новый заказ:
+        send_chef(message=f"""Новый заказ:
 Количество: {bro[0]} 
 Время: {bro[1]}
-Доп пожелания: {bro[2]}""")
-
+Доп пожелания: {bro[2]}
+Телефон: {bro[3]}""")
 
 
 bot.polling(none_stop=True)
+
