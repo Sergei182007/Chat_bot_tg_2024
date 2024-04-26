@@ -9,7 +9,6 @@ import json
 from num2words import num2words
 
 bot = telebot.TeleBot('6717203066:AAFTeOlXXp22qUyOcCm7AznOuMu5ruMEjl0')
-
 api_key = "d5266e93-d944-4940-81bc-3f5ebe29776b"
 
 morning = ['Доброе утро! Чем я могу Вам помочь?', "Доброе утро! Что пожелаете?",
