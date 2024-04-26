@@ -36,7 +36,7 @@ def starts(message):
     print(bro)
     # добавляем на нее две кнопки
     button2 = types.InlineKeyboardButton(text="🍽 Забронировать столик", callback_data="broni")
-    button3 = types.InlineKeyboardButton(text="5️ Оставить отзыв", url="https://google.com")
+    button3 = types.InlineKeyboardButton(text="5️ Оставить отзыв", url="https://docs.google.com/forms/d/e/1FAIpQLSfXVkqmB07eV1GkmOPNBSReLkNvan8V1Cr4i8INLRHab0JrbQ/viewform")
     button4 = types.InlineKeyboardButton(text="🚕️ Где нас найти?", callback_data="button4")
     button5 = types.InlineKeyboardButton(text="❓️ Задать вопрос", callback_data="question")
     button6 = types.InlineKeyboardButton(text="Как получить скидку", callback_data="playplay")
