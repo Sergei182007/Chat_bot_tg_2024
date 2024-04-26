@@ -6,6 +6,7 @@ import random
 import re
 import requests
 import json
+from num2words import num2words
 
 bot = telebot.TeleBot('6717203066:AAFTeOlXXp22qUyOcCm7AznOuMu5ruMEjl0')
 
@@ -28,7 +29,7 @@ plays = {}
 
 
 @bot.message_handler(commands=['start'])
-def start(message):
+def starts(message):
     markup = types.InlineKeyboardMarkup()
     plays[f"{str(message.from_user.id)}"] = 0
     bro[f"{str(message.from_user.id)}"] = []
@@ -52,6 +53,7 @@ def start(message):
         bot.send_message(message.chat.id, random.choice(evening), reply_markup=markup)
     else:
         bot.send_message(message.chat.id, random.choice(night), reply_markup=markup)
+
 
 
 @bot.message_handler(commands=['menu'])
@@ -129,46 +131,55 @@ def play(message):
 @bot.message_handler(commands=['br'])
 def welcome(message):
     chat_id = message.chat.id
-    bot.send_message(chat_id, 'Сколько человек пойдет с Вами?')
+    bot.send_message(chat_id, '👨‍👩‍👦‍👦 Сколько человек пойдет с Вами?')
     bot.register_next_step_handler(message, first)
 
 
 def first(message):
     name = message.text
     chat_id = message.chat.id
+    buttonfirst = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("⬅️ Назад", callback_data='12345')
+    buttonfirst.add(btn1)
     if int(name) > 10:
         bot.send_message(chat_id, "К сожалению, забронировать столик можно не более чем для 10 человек")
-        buttonfirst = types.InlineKeyboardMarkup()
-        btn1 = types.InlineKeyboardButton("Назад", callback_data='12345')
-        buttonfirst.add(btn1)
     else:
         bro[f"{str(message.from_user.id)}"].append(name)
-        bot.send_message(chat_id, 'Укажите дату, на которую бы Вы хотели забронировать столик')
+        bot.send_message(chat_id, '📆 Укажите дату, на которую бы Вы хотели забронировать столик', reply_markup=buttonfirst)
     bot.register_next_step_handler(message, second)
 
 
 def second(message):
     chat_id = message.chat.id
     name = message.text
+    buttonsecond = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("⬅️ Назад", callback_data='12345')
+    buttonsecond.add(btn1)
     bro[f"{str(message.from_user.id)}"].append(name)
-    bot.send_message(chat_id, f'Отлично! Теперь укажите время, на которое Вы хотите забронировать столик')
+    bot.send_message(chat_id, f'⌚️ Отлично! Теперь укажите время, на которое Вы хотите забронировать столик', reply_markup=buttonsecond)
     bot.register_next_step_handler(message, third)
 
 
 def third(message):
     chat_id = message.chat.id
     name = message.text
+    buttonthird = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("⬅️ Назад", callback_data='12345')
+    buttonthird.add(btn1)
     bro[str(message.from_user.id)].append(name)
-    bot.send_message(chat_id, f'Отлично! Теперь укажите дополнительные пожелания, если они есть')
+    bot.send_message(chat_id, f'Отлично! Теперь укажите дополнительные пожелания, если они есть', reply_markup=buttonthird)
     bot.register_next_step_handler(message, four)
 
 
 def four(message):
     chat_id = message.chat.id
     name = message.text
+    fourth = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("⬅️ Назад", callback_data='12345')
+    fourth.add(btn1)
     if "Номер телефона введен неверно" not in name:
         bro[str(message.from_user.id)].append(name)
-        bot.send_message(chat_id, f'Отлично! Осталось указать номер телефона, чтобы мы могли с Вами связаться')
+        bot.send_message(chat_id, f'Супер! Осталось указать номер телефона, чтобы мы могли с Вами связаться', reply_markup=fourth)
     else:
         bot.send_message(chat_id, f'Введите номер телефона ещё раз.')
     bot.register_next_step_handler(message, five)
@@ -183,8 +194,8 @@ def five(message):
         bro[str(message.from_user.id)].append(name)
         print(bro)
         button = types.InlineKeyboardMarkup()
-        no = types.InlineKeyboardButton("Отменить", callback_data='no')
-        yes = types.InlineKeyboardButton("Подтвердить", callback_data='yes')
+        no = types.InlineKeyboardButton("❌ Отменить", callback_data='no')
+        yes = types.InlineKeyboardButton("✅ Подтвердить", callback_data='yes')
         button.add(no)
         button.add(yes)
         chat_id = message.chat.id
@@ -250,18 +261,6 @@ def help_bot(message):
     bot.register_next_step_handler(message, help_bot)
 
 
-@bot.message_handler(content_types=['location'])
-def get_user_location(message):
-    latitude = message.location.latitude
-    longitude = message.location.longitude
-    url = f"https://api.weather.yandex.ru/v2/informers?lat={latitude}&lon={longitude}"
-    headers = {"X-Yandex-API-Key": "d5266e93-d944-4940-81bc-3f5ebe29776b"}
-    r = requests.get(url=url, headers=headers)
-    if r.status_code == 200:
-        data = json.loads(r.text)
-        fact = data['fact']
-
-    bot.send_message(message.chat.id, f"Сейчас в Вашем городе {fact['temp']}")
 
 
 @bot.message_handler(commands=["requests"], func=lambda m: int(m.chat.id) == int(1970887100))
@@ -301,14 +300,13 @@ def function(call):
         four(message=call.message)
     if call.data.startswith("answer"):
         chat_id = int(call.data[6:])
-
         bot.send_message(call.message.chat.id, "Напишите ответное сообщение пользователю")
         bot.register_next_step_handler(call.message, lambda msg: send_answer(msg, call, chat_id))
     if call.data.startswith("delete"):
         chat_id = int(call.data[6:])
         bot.send_message(chat_id, "Администратор посчитал Ваш запрос плохим")
     if call.data == "no":
-        bot.send_message(call.message.chat.id, 'Вы отменили бронирование столика, но можете попробовать еще раз')
+        bot.send_message(call.message.chat.id, 'Вы отменили бронирование столика, но можете попробовать еще раз. Напишите /br')
         bot.delete_message(call.message.chat.id, call.message.message_id)
     if call.data == "playplay":
         play(message=call.message)
@@ -322,6 +320,11 @@ def function(call):
 Телефон: {bro[str(call.from_user.id)][4]}""")
         bro[str(call.from_user.id)] = []
 
+    if call.data == "12345":
+        bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
+        bro[str(call.message.chat.id)] = []
+        starts(message=call.message)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
 
     playing_sp = ['🗿', '✂️', '📄']
     choice = random.choice(playing_sp)
@@ -348,6 +351,13 @@ def function(call):
         if choice == "✂️":
             bot.send_message(call.message.chat.id,
                              f"Вы победили! Бот выбрал: {choice}\n\nЧтобы начать новую игру напишите: /play")
+            plays[str(call.from_user.id)] += 1
+            t = num2words(plays[str(call.from_user.id)], lang="ru", to="ordinal")
+            bot.send_message(call.message.chat.id, f"Поздравляем, Вы выиграли у бота {t} раз")
+            if t == "десятый":
+                bot.send_message(call.message.chat.id,
+                                 f"Поздравляем, Вы получили скидку {random.choice([1, 2, 4, 5])}%")
+                plays[str(call.from_user.id)] = 0
 
         else:
             bot.send_message(call.message.chat.id,
@@ -357,6 +367,13 @@ def function(call):
         if choice == "🗿":
             bot.send_message(call.message.chat.id,
                              f"Вы победили! Бот выбрал: {choice}\n\nЧтобы начать новую игру напишите: /play")
+            plays[str(call.from_user.id)] += 1
+            t = num2words(plays[str(call.from_user.id)], lang="ru", to="ordinal")
+            bot.send_message(call.message.chat.id, f"Поздравляем, Вы выиграли у бота {t} раз")
+            if t == "десятый":
+                bot.send_message(call.message.chat.id,
+                                 f"Поздравляем, Вы получили скидку {random.choice([1, 2, 4, 5])}%!")
+                plays[str(call.from_user.id)] = 0
 
         else:
             bot.send_message(call.message.chat.id,
@@ -366,6 +383,13 @@ def function(call):
         if choice == "📄":
             bot.send_message(call.message.chat.id,
                              f"Вы победили! Бот выбрал: {choice}\n\nЧтобы начать новую игру напишите: /play")
+            plays[str(call.from_user.id)] += 1
+            t = num2words(plays[str(call.from_user.id)], lang="ru", to="ordinal")
+            bot.send_message(call.message.chat.id, f"Поздравляем, Вы выиграли у бота {t} раз!")
+            if t == "десятый":
+                bot.send_message(call.message.chat.id,
+                                 f"Поздравляем, Вы получили скидку {random.choice([1, 2, 4, 5])}%!!")
+                plays[str(call.from_user.id)] = 0
 
         else:
             bot.send_message(call.message.chat.id,
@@ -373,4 +397,3 @@ def function(call):
 
 
 bot.polling(none_stop=True)
-
